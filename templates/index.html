@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Обитель Вики</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg: #fdfdfd;
+            --text: #111;
+            --border: #ccc;
+            --link: #0055cc;
+        }
+        body {
+            font-family: "Courier New", Courier, monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { font-weight: bold; }
+        h1 { border-bottom: 2px solid var(--text); padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 30px;}
+        
+        /* Стиль строки "Автор: admin | Дата: 11/20/2026" */
+        .article-meta { 
+            color: #666; 
+            font-size: 0.9em; 
+            margin-bottom: 20px; 
+            padding-bottom: 10px;
+        }
+        
+        .block { margin-bottom: 30px; }
+        
+        /* Текст статьи - всегда code, чуть больше размером */
+        .block-body {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 1.15rem; /* Увеличенный размер текста */
+            line-height: 1.8;
+            color: #222;
+        }
+         .block-body p {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #222;
+            margin-top: 0;
+            margin-bottom: 1.2em;
+            white-space: pre-wrap; /* Сохраняем пробелы и переносы */
+            word-wrap: break-word;
+        }
+        
+        /* Стили для центрирования картинок и подписей */
+        .block-body img {
+            max-width: 50%; /* Максимум половина ширины */
+            display: block;
+            margin: 20px auto;
+            border: 1px solid var(--border);
+            background: #fafafa;
+            padding: 5px;
+        }
+        .block-body figure {
+            margin: 25px 0;
+            text-align: center;
+        }
+        .block-body figcaption {
+            font-size: 0.9rem; /* Подпись чуть меньше текста */
+            font-style: italic;
+            color: #555;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Блок для редакторов */
+        .editors-section {
+            margin-top: 60px;
+            padding: 20px;
+            border: 1px solid var(--text);
+            background: #f4f4f4;
+        }
+        .editors-section h3 { margin-top: 0; }
+        
+        input, textarea, button {
+            font-family: inherit;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid var(--border);
+            width: 100%;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        textarea.block-body {
+            resize: none;       /* Убираем ручной ресайз */
+            overflow: hidden;   /* Убираем скроллбар */
+            min-height: 1.8em;  /* Минимум одна строка */
+        }
+
+        button {
+            background: var(--text);
+            color: var(--bg);
+            cursor: pointer;
+            width: auto;
+            font-weight: bold;
+        }
+        button:hover { background: #333; }
+        .hidden { display: none !important; }
+
+        /* Стили для формы создания */
+        .block-edit {
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fff;
+        }
+        .upload-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            background: #eee;
+            padding: 8px;
+            border: 1px dashed #ccc;
+        }
+        .upload-row input[type="file"] {
+            border: none;
+            background: transparent;
+            padding: 0;
+            width: auto;
+            cursor: pointer;
+        }
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+
+                /* === Футер === */
+        .site-footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            padding-bottom: 40px;
+            border-top: 1px dashed var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 40px;
+            font-size: 0.9em;
+        }
+        .footer-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .site-footer a {
+            color: #888;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.15s;
+        }
+        .site-footer a:hover {
+            color: var(--text);
+            text-decoration: underline;
+        }
+        .site-footer svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.7;
+        }
+        .site-footer a:hover svg {
+            opacity: 1;
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 500px) {
+            .site-footer {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* === Модальное окно === */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+        .modal-box {
+            background: var(--bg);
+            border: 1px solid var(--text);
+            padding: 25px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .modal-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            padding-right: 30px;
+        }
+       .modal-box .modal-close {
+            position: absolute;
+            top: 17px;
+            right: 20px;
+            width: 30px !important;  /* Перебиваем width: 100% */
+            height: 30px;
+            background: none;
+            border: none;
+            font-size: 1.4em;
+            cursor: pointer;
+            color: #888;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            z-index: 10;
+        }
+        .modal-box .modal-close:hover {
+            color: var(--text);
+            background: none;
+        }
+        .modal-close:hover {
+            color: var(--text);
+            background: none;
+        }
+        .modal-box input, .modal-box textarea, .modal-box button {
+            width: 100%;
+        }
+        .modal-box .btn-row {
+            flex-direction: column;
+        }
+        .modal-box .btn-row button {
+            width: 100%;
+        }
+
+
+
+        .img-previews { margin-top: 8px; }
+        .img-preview {
+            border: 1px dashed var(--border);
+            background: #fafafa;
+            padding: 6px 8px;
+            margin-top: 6px;
+            font-size: 0.85em;
+        }
+        .img-preview-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: #666;
+        }
+        .img-preview-head code {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .img-preview-head button {
+            width: auto;
+            margin: 0;
+            padding: 2px 8px;
+            font-size: 0.85em;
+        }
+        .img-preview img {
+            display: block;
+            max-width: 50%;
+            margin: 8px auto 2px;
+            border: 1px solid var(--border);
+            padding: 4px;
+            background: #fff;
+        }
+        .img-preview.collapsed img { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ОБИТЕЛЬ WIKI</h1>
+        <p>База знаний паблика. Чтение доступно всем.</p>
+    </header>
+
+    <!-- Список статей -->
+    <main id="articles-list">
+        <h2>Статьи</h2>
+        <ul id="list">
+            <li>Загрузка...</li>
+        </ul>
+    </main>
+
+    <!-- Просмотр статьи -->
+    <article id="article-view" class="hidden">
+        <h1 id="art-title"></h1>
+        <div class="article-meta">Автор: <span id="art-author"></span> | Дата: <span id="art-date"></span></div>
+        <div id="art-blocks"></div>
+        <div class="btn-row">
+            <button onclick="showList()">← Назад к списку</button>
+            <button id="edit-btn" class="hidden" onclick="editCurrentArticle()" style="background: #0055cc;">✎ Редактировать</button>
+        </div>
+    </article>
+
+    <!-- Форма создания статьи -->
+    <section id="create-article-form" class="editors-section hidden">
+        <h3>Создание новой статьи</h3>
+        <input type="text" id="new-art-title" placeholder="Заголовок статьи (Обязательно)">
+        
+        <div id="blocks-container"></div>
+        
+        <div class="btn-row">
+            <button onclick="addBlock()">+ Добавить блок</button>
+            <button onclick="submitArticle()" style="background: #0055cc;">Сохранить статью</button>
+            <button onclick="cancelCreate()" style="background: #666;">Отмена</button>
+        </div>
+    </section>
+
+    <!-- Футер -->
+    <footer class="site-footer">
+        <div class="footer-col">
+            <a href="https://t.me/obitel_of_shit" title="Обитель щитпостов">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                Обитель щитпостов
+            </a>
+            <a href="https://t.me/miceliumus" title="Мицелий">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                мицелий
+            </a>
+            <a href="https://t.me/paraproduction" title="Парафрения продакшн">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                Парафрения продакшн
+            </a>
+        </div>
+        <div class="footer-col">
+            <a href="#" title="О нас">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                О нас
+            </a>
+            <a href="#" title="Контакты">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                Контакты
+            </a>
+            <a href="#" onclick="openAdminModal(event)" title="Для админов">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Для админов
+            </a>
+        </div>
+    </footer>
+
+    <!-- Модалка: вход / панель редактора -->
+    <div id="admin-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeAdminModal()" title="Закрыть">×</button>
+
+            <!-- Форма входа -->
+            <div id="login-form">
+                <h3>Вход для редакторов</h3>
+                <p style="font-size: 0.9em; color: #666;">Аккаунты выдаются администратором.</p>
+                <input type="text" id="username" placeholder="Логин">
+                <input type="password" id="password" placeholder="Пароль">
+                <button onclick="login()">Войти</button>
+            </div>
+
+            <!-- Панель управления после входа -->
+            <div id="admin-panel" class="hidden">
+                <h3>Панель редактора</h3>
+                <p style="color: green; font-size: 0.9em;">Вы авторизованы.</p>
+                <div class="btn-row">
+                    <button onclick="showCreateForm(); closeAdminModal();">Создать статью</button>
+                    <button onclick="logout()" style="background: #666;">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentArticleId = null;
+        let currentArticleData = null;
+
+                const renderer = new marked.Renderer();
+        
+        // Картинки — по центру с подписью
+        renderer.image = (token) => {
+            const href = token.href;
+            const title = token.title || '';
+            const text = token.text || '';
+            return `<figure>
+                        <img src="${href}" alt="${text}" title="${title}">
+                        ${text ? `<figcaption>${text}</figcaption>` : ''}
+                    </figure>`;
+        };
+        
+        // Отключаем <pre><code> для отступов — пусть будет обычный текст
+        renderer.code = (token) => {
+            const code = typeof token === 'string' ? token : token.text;
+            // Возвращаем как обычный параграф с сохранением пробелов
+            return `<p style="white-space: pre-wrap;">${code}</p>`;
+        };
+        
+        marked.setOptions({ 
+            renderer: renderer,
+            breaks: true // переносы строк как <br>
+        });
+
+        // Автоматически подгоняем высоту textarea под контент
+        function autoResize(textarea) {
+            // Запоминаем текущую позицию скролла страницы
+            const scrollY = window.scrollY;
+            
+            // Сбрасываем высоту в 'auto' ТОЛЬКО если текст удаляют (чтобы поле могло сжаться).
+            // Если текст добавляют, сбрасывать не нужно — это вызывает прыжок страницы.
+            if (textarea.scrollHeight < textarea.offsetHeight || textarea.value === '') {
+                textarea.style.height = 'auto';
+            }
+            
+            // Устанавливаем новую высоту
+            textarea.style.height = (textarea.scrollHeight + 2) + 'px';
+            
+            // Возвращаем скролл на место, чтобы страница не прыгала
+            window.scrollTo(0, scrollY);
+        }
+
+        // --- Логика отображения ---
+        function showList() {
+            document.getElementById('article-view').classList.add('hidden');
+            document.getElementById('create-article-form').classList.add('hidden');
+            document.getElementById('articles-list').classList.remove('hidden');
+            fetchArticles();
+        }
+
+        function cancelCreate() {
+            showList();
+        }
+
+        // --- Загрузка и просмотр ---
+        async function fetchArticles() {
+            const res = await fetch('/api/articles');
+            const articles = await res.json();
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            if (articles.length === 0) {
+                list.innerHTML = '<li>Статей пока нет.</li>';
+                return;
+            }
+            articles.forEach(a => {
+                list.innerHTML += `<li><a href="#" onclick="viewArticle(${a.id})">${a.title}</a></li>`;
+            });
+        }
+
+        async function viewArticle(id) {
+            const res = await fetch(`/api/articles/${id}`);
+            const art = await res.json();
+            
+            currentArticleId = art.id;
+            currentArticleData = art;
+            
+            document.getElementById('articles-list').classList.add('hidden');
+            document.getElementById('create-article-form').classList.add('hidden');
+            document.getElementById('article-view').classList.remove('hidden');
+            
+            document.getElementById('art-title').innerText = art.title;
+            document.getElementById('art-author').innerText = art.author.username;
+            
+            const date = new Date(art.created_at);
+            const formattedDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
+            document.getElementById('art-date').innerText = formattedDate;
+            
+            const blocksDiv = document.getElementById('art-blocks');
+            blocksDiv.innerHTML = '';
+            
+            art.blocks.sort((a,b) => a.order - b.order).forEach(block => {
+                let html = `<div class="block">`;
+                if (block.heading) html += `<h2>${block.heading}</h2>`;
+                if (block.body) {
+                    // Экранируем табы и кратные пробелы, чтобы marked не схлопывал их
+                    const safeBody = block.body
+                        .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                        .replace(/ {2,}/g, (m) => '&nbsp;'.repeat(m.length));
+                    html += `<div class="block-body">${marked.parse(safeBody)}</div>`;
+                }
+                html += `</div>`;
+                blocksDiv.innerHTML += html;
+            });
+
+            // Показываем кнопку редактирования, если пользователь авторизован как редактор/админ
+            const editBtn = document.getElementById('edit-btn');
+            if (!document.getElementById('admin-panel').classList.contains('hidden')) {
+                editBtn.classList.remove('hidden');
+            } else {
+                editBtn.classList.add('hidden');
+            }
+        }
+
+        // --- Авторизация ---
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            
+            if (res.ok) {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                // Если сейчас открыта статья — показываем кнопку редактирования
+                if (currentArticleData) {
+                    document.getElementById('edit-btn').classList.remove('hidden');
+                }
+            } else {
+                alert("Ошибка входа.");
+            }
+        }
+        
+        function logout() {
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
+            document.getElementById('create-article-form').classList.add('hidden');
+            document.getElementById('edit-btn').classList.add('hidden'); // скрываем кнопку
+            closeAdminModal();
+            showList();
+        }
+
+        // === Модалка авторизации ===
+        function openAdminModal(e) {
+            if (e) e.preventDefault();
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+        }
+
+        // Закрытие кликом по фону (не по самой модалке) и по Esc
+        document.getElementById('admin-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeAdminModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeAdminModal();
+        });
+
+
+
+        const IMG_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+
+        function renderPreviews(blockDiv) {
+            const textarea = blockDiv.querySelector('.block-body');
+            const box = blockDiv.querySelector('.img-previews');
+            if (!blockDiv._hidden) blockDiv._hidden = new Set();
+            box.innerHTML = '';
+
+            for (const m of textarea.value.matchAll(IMG_RE)) {
+                const alt = m[1];
+                const url = m[2];
+
+                const item = document.createElement('div');
+                item.className = 'img-preview';
+                if (blockDiv._hidden.has(url)) item.classList.add('collapsed');
+
+                const head = document.createElement('div');
+                head.className = 'img-preview-head';
+
+                const label = document.createElement('code');
+                label.textContent = alt ? `${alt} — ${url}` : url;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = item.classList.contains('collapsed') ? 'показать' : 'скрыть';
+                btn.onclick = () => {
+                    const collapsed = item.classList.toggle('collapsed');
+                    btn.textContent = collapsed ? 'показать' : 'скрыть';
+                    if (collapsed) blockDiv._hidden.add(url);
+                    else blockDiv._hidden.delete(url);
+                };
+
+                head.append(label, btn);
+
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = alt;
+                img.onerror = () => { img.replaceWith(Object.assign(document.createElement('div'), {
+                    textContent: '⚠ картинка не загрузилась',
+                    style: 'color:#c00;margin-top:6px;'
+                })); };
+
+                item.append(head, img);
+                box.appendChild(item);
+            }
+        }
+
+        function createBlockEditor(block = {}) {
+            const blockDiv = document.createElement('div');
+            blockDiv.className = 'block-edit';
+            blockDiv.innerHTML = `
+                <input type="text" class="block-heading" placeholder="Подзаголовок блока (опционально)">
+                <textarea class="block-body" rows="1" placeholder="Текст блока... Сюда можно вставлять картинки"></textarea>
+                <div class="img-previews"></div>
+                <div class="upload-row">
+                    <span>Вставить картинку:</span>
+                    <input type="file" accept="image/*" onchange="uploadInlineImage(this)">
+                </div>
+            `;
+            // значения через .value — без проблем с кавычками и HTML в тексте
+            blockDiv.querySelector('.block-heading').value = block.heading || '';
+            const textarea = blockDiv.querySelector('.block-body');
+            textarea.value = block.body || '';
+
+            textarea.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const s = this.selectionStart, en = this.selectionEnd;
+                    this.value = this.value.substring(0, s) + '    ' + this.value.substring(en);
+                    this.selectionStart = this.selectionEnd = s + 4;
+                    autoResize(this);
+                }
+            });
+            textarea.addEventListener('input', function () {
+                autoResize(this);
+                renderPreviews(blockDiv);
+            });
+
+            document.getElementById('blocks-container').appendChild(blockDiv);
+            requestAnimationFrame(() => { autoResize(textarea); renderPreviews(blockDiv); });
+            return blockDiv;
+        }
+
+        function addBlock() {
+            createBlockEditor();
+        }
+
+        function editCurrentArticle() {
+            if (!currentArticleData) return;
+
+            editingArticleId = currentArticleData.id;
+
+            document.getElementById('articles-list').classList.add('hidden');
+            document.getElementById('article-view').classList.add('hidden');
+            document.getElementById('create-article-form').classList.remove('hidden');
+
+            document.getElementById('new-art-title').value = currentArticleData.title;
+            document.getElementById('blocks-container').innerHTML = '';
+
+            currentArticleData.blocks
+                .sort((a, b) => a.order - b.order)
+                .forEach(block => createBlockEditor(block));
+        }
+
+        // Загрузка картинки (исправлено для множественных загрузок)
+        async function uploadInlineImage(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const blockDiv = inputElement.closest('.block-edit');
+            const textarea = blockDiv.querySelector('.block-body');
+            const uploadRow = inputElement.closest('.upload-row');
+
+            // Создаем индикатор загрузки (если его нет)
+            let statusSpan = uploadRow.querySelector('.upload-status');
+            if (!statusSpan) {
+                statusSpan = document.createElement('span');
+                statusSpan.className = 'upload-status';
+                statusSpan.style.color = 'blue';
+                statusSpan.style.marginLeft = '10px';
+                statusSpan.style.fontSize = '0.9em';
+                uploadRow.appendChild(statusSpan);
+            }
+
+            statusSpan.innerText = 'Загрузка...';
+            inputElement.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append("image", file);
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error("Ошибка загрузки");
+
+                const data = await res.json();
+                
+                const caption = prompt("Введите подпись к картинке (оставьте пустым, если не нужна):", "");
+                const markdownTag = `\n\n![${caption || ''}](${data.url})\n\n`;
+                
+                const startPos = textarea.selectionStart;
+                const endPos = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, startPos) 
+                               + markdownTag 
+                               + textarea.value.substring(endPos, textarea.value.length);
+                
+                textarea.focus();
+                textarea.selectionEnd = startPos + markdownTag.length;
+
+                autoResize(textarea);
+                renderPreviews(blockDiv);
+
+            } catch (err) {
+                alert("Не удалось загрузить картинку: " + err.message);
+            } finally {
+                // ВАЖНО: Сбрасываем значение input, чтобы можно было выбрать этот же файл снова,
+                // и включаем его обратно
+                inputElement.value = ''; 
+                inputElement.disabled = false;
+                statusSpan.innerText = ''; // Очищаем индикатор
+            }
+        }
+
+        let editingArticleId = null; // null = создание новой, число = редактирование
+
+        function showCreateForm() {
+            editingArticleId = null;
+            document.getElementById('articles-list').classList.add('hidden');
+            document.getElementById('article-view').classList.add('hidden');
+            document.getElementById('create-article-form').classList.remove('hidden');
+            
+            document.getElementById('new-art-title').value = '';
+            document.getElementById('blocks-container').innerHTML = '';
+            addBlock();
+        }
+
+
+
+        async function submitArticle() {
+            const title = document.getElementById('new-art-title').value;
+            if (!title) return alert("Введите заголовок статьи!");
+
+            const blockElements = document.querySelectorAll('.block-edit');
+            const blocks = [];
+            
+            blockElements.forEach((el, index) => {
+                const heading = el.querySelector('.block-heading').value;
+                const body = el.querySelector('.block-body').value;
+                if (!heading && !body) return;
+                blocks.push({ order: index, heading: heading, body: body });
+            });
+
+            const payload = { title: title, blocks: blocks };
+            
+            let url = '/api/articles';
+            let method = 'POST';
+            
+            if (editingArticleId) {
+                url = `/api/articles/${editingArticleId}`;
+                method = 'PUT';
+            }
+
+            const res = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+                alert(editingArticleId ? "Статья обновлена!" : "Статья создана!");
+                editingArticleId = null;
+                showList();
+            } else {
+                const err = await res.json();
+                alert("Ошибка: " + err.error);
+            }
+        }
+
+        fetchArticles();
+    </script>
+</body>
+</html>
