@@ -495,7 +495,7 @@
                         .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
                         .replace(/ {2,}/g, (m) => '&nbsp;'.repeat(m.length));
 
-                    const rawHtml = marked.parse(block.body);
+                    const rawHtml = marked.parse(safeBody.body);
                     const cleanHtml = DOMPurify.sanitize(rawHtml);
                     html += `<div class="block-body">${cleanHtml}</div>`;
                 }
