@@ -38,7 +38,9 @@ func Login(c *gin.Context) {
 
 	token, _ := middleware.GenerateToken(user.ID, user.Role)
 	// устанавливаем куки
-	c.SetCookie("token", token, 3600*24*3, "/", "", false, true)
+	isProd := os.Getenv("APP_ENV") == "production"
+	c.SetCookie("token", token, 3600*24*3, "/", "", isProd, true)
+	
 	c.JSON(http.StatusOK, gin.H{"token": token, "role": user.Role})
 }
 
