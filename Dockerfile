@@ -17,7 +17,6 @@ RUN apk --no-cache add ca-certificates tzdata
 
 COPY --from=builder /app/main .
 COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/static ./static
 
 EXPOSE 8080
 

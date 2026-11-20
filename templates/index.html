@@ -49,8 +49,12 @@
             color: #222;
             margin-top: 0;
             margin-bottom: 1.2em;
-            white-space: pre-wrap; /* Сохраняем пробелы и переносы */
             word-wrap: break-word;
+        }
+
+        .block-body .preserve-whitespace {
+            white-space: pre-wrap;
+            tab-size: 4;
         }
         
         /* Стили для центрирования картинок и подписей */
@@ -408,7 +412,7 @@
         renderer.code = (token) => {
             const code = typeof token === 'string' ? token : token.text;
             // Возвращаем как обычный параграф с сохранением пробелов
-            return `<p style="white-space: pre-wrap;">${code}</p>`;
+            return `<p class="preserve-whitespace">${code}</p>`;
         };
         
         marked.setOptions({ 
