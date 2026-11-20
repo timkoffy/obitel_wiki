@@ -490,13 +490,21 @@
                 let html = `<div class="block">`;
                 if (block.heading) html += `<h2>${block.heading}</h2>`;
                 if (block.body) {
-                    // Экранируем табы и кратные пробелы, чтобы marked не схлопывал их
-                    const safeBody = block.body
-                        .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-                        .replace(/ {2,}/g, (m) => '&nbsp;'.repeat(m.length));
+                    // 1. Заменяем ведущие пробелы и табы в начале КАЖДОЙ строки на &nbsp;
+                    let safeBody = block.body.replace(/^[ \t]+/gm, (match) => {
+                        // Табы меняем на 4 пробела, а затем все пробелы на &nbsp;
+                        return match.replace(/\t/g, '    ').replace(/ /g, '&nbsp;');
+                    });
 
-                    const rawHtml = marked.parse(safeBody.body);
+                    // 2. Парсим Markdown
+                    let rawHtml = marked.parse(safeBody);
+                    
+                    // 3. Возвращаем неразрывные пробелы (marked превращает & в &amp;)
+                    rawHtml = rawHtml.replace(/&amp;nbsp;/g, '&nbsp;');
+
+                    // 4. Очищаем от XSS
                     const cleanHtml = DOMPurify.sanitize(rawHtml);
+                    
                     html += `<div class="block-body">${cleanHtml}</div>`;
                 }
                 html += `</div>`;
