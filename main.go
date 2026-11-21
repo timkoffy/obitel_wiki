@@ -36,6 +36,7 @@ func main() {
 			protected.POST("/articles", middleware.RoleMiddleware("admin", "editor"), handlers.CreateArticle)
 			protected.POST("/upload", middleware.RoleMiddleware("admin", "editor"), handlers.UploadImage)
 			protected.PUT("/articles/:id", middleware.RoleMiddleware("admin", "editor"), handlers.UpdateArticle)
+			protected.DELETE("/articles/:id", middleware.RoleMiddleware("admin", "editor"), handlers.DeleteArticle)
 
 			// только для админа
 			admin := protected.Group("/admin")

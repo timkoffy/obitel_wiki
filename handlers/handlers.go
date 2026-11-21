@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"regexp"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -85,6 +87,54 @@ func CreateArticle(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
+// DeleteArticle - удаление статьи
+func DeleteArticle(c *gin.Context) {
+	id := c.Param("id")
+	
+	var article models.Article
+	// Загружаем статью вместе с блоками
+	if err := database.DB.Preload("Blocks").First(&article, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Статья не найдена"})
+		return
+	}
+
+	// Ищем все ссылки на картинки в тексте блоков (формат Markdown)
+	// Регулярное выражение ищет ![alt](/static/uploads/...) 
+	re := regexp.MustCompile(`!\[.*?\]\((/static/uploads/[^)]+)\)`)
+	var imagePaths []string
+
+	for _, block := range article.Blocks {
+		matches := re.FindAllStringSubmatch(block.Body, -1)
+		for _, match := range matches {
+			if len(match) > 1 {
+				imagePaths = append(imagePaths, match[1])
+			}
+		}
+	}
+
+	// 1. Удаляем статью из БД
+	// Благодаря настройкам GORM (constraint:OnDelete:CASCADE) 
+	// связанные Блоки и старые записи Картинок тоже удалятся.
+	if err := database.DB.Delete(&article).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось удалить статью из БД"})
+		return
+	}
+
+	// 2. Удаляем физические файлы картинок с диска
+	for _, urlPath := range imagePaths {
+		// urlPath выглядит как "/static/uploads/123.png"
+		// Нам нужно "./static/uploads/123.png" (или "/app/static/..." в докере)
+		localPath := "." + urlPath 
+		err := os.Remove(localPath)
+		if err != nil {
+			// Если файл не найден или удалить не удалось — просто пишем в лог, не прерывая процесс
+			log.Printf("Не удалось удалить файл картинки %s: %v", localPath, err)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Статья успешно удалена"})
+}
+
 // список всех статей (доступно всем)
 func GetArticles(c *gin.Context) {
 	var articles []models.Article
@@ -147,13 +197,6 @@ func UpdateArticle(c *gin.Context) {
 	var article models.Article
 	if err := database.DB.Preload("Blocks").First(&article, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
-		return
-	}
-
-	// проверяем, что пользователь - админ
-	role, _ := c.Get("role")
-	if role != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You cannot edit articles unless you're not an admin"})
 		return
 	}
 

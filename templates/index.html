@@ -38,7 +38,7 @@
         /* Текст статьи - всегда code, чуть больше размером */
         .block-body {
             font-family: "Courier New", Courier, monospace;
-            font-size: 1.15rem; /* Увеличенный размер текста */
+            font-size: 1rem;
             line-height: 1.8;
             color: #222;
         }
@@ -138,7 +138,7 @@
         }
         .btn-row { display: flex; gap: 10px; margin-top: 10px; }
 
-                /* === Футер === */
+        /* === Футер === */
         .site-footer {
             margin-top: 80px;
             padding-top: 20px;
@@ -316,6 +316,8 @@
         <div class="btn-row">
             <button onclick="showList()">← Назад к списку</button>
             <button id="edit-btn" class="hidden" onclick="editCurrentArticle()" style="background: #0055cc;">✎ Редактировать</button>
+            <button id="delete-btn" class="hidden" onclick="deleteCurrentArticle()" style="background: #cc0000;">✖ Удалить</button>
+        </div>
         </div>
     </article>
 
@@ -513,10 +515,14 @@
 
             // Показываем кнопку редактирования, если пользователь авторизован как редактор/админ
             const editBtn = document.getElementById('edit-btn');
+            const deleteBtn = document.getElementById('delete-btn');
+            
             if (!document.getElementById('admin-panel').classList.contains('hidden')) {
                 editBtn.classList.remove('hidden');
+                deleteBtn.classList.remove('hidden');
             } else {
                 editBtn.classList.add('hidden');
+                deleteBtn.classList.add('hidden');
             }
         }
 
@@ -536,6 +542,7 @@
                 // Если сейчас открыта статья — показываем кнопку редактирования
                 if (currentArticleData) {
                     document.getElementById('edit-btn').classList.remove('hidden');
+                    document.getElementById('remove-btn').classList.remove('hidden');
                 }
             } else {
                 alert("Ошибка входа.");
@@ -548,6 +555,7 @@
             document.getElementById('admin-panel').classList.add('hidden');
             document.getElementById('create-article-form').classList.add('hidden');
             document.getElementById('edit-btn').classList.add('hidden'); // скрываем кнопку
+            document.getElementById('delete-btn').classList.add('hidden');
             closeAdminModal();
             showList();
         }
@@ -790,6 +798,27 @@
             } else {
                 const err = await res.json();
                 alert("Ошибка: " + err.error);
+            }
+        }
+
+        async function deleteCurrentArticle() {
+            if (!currentArticleId) return;
+            
+            // Спрашиваем подтверждение
+            if (!confirm("Вы уверены, что хотите удалить эту статью? Все картинки также будут удалены. Это действие нельзя отменить.")) {
+                return;
+            }
+
+            const res = await fetch(`/api/articles/${currentArticleId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert("Статья успешно удалена.");
+                showList(); // Возвращаемся к списку статей
+            } else {
+                const err = await res.json();
+                alert("Ошибка при удалении: " + (err.error || "Неизвестная ошибка"));
             }
         }
 
